@@ -178,9 +178,13 @@ export interface DnsSetCustomParams {
   nameservers: string[];
 }
 
+export const DNS_RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'MXE', 'NS', 'TXT', 'URL', 'URL301', 'FRAME'] as const;
+export const DNS_EMAIL_TYPES = ['NONE', 'MXE', 'MX', 'FWD', 'OX', 'GMAIL'] as const;
+export type DnsEmailType = typeof DNS_EMAIL_TYPES[number];
+
 export interface DnsHost {
   hostname: string;
-  recordType: 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'SRV' | 'CAA';
+  recordType: typeof DNS_RECORD_TYPES[number];
   address: string;
   mxPriority?: number;
   ttl?: number;
@@ -190,6 +194,7 @@ export interface DnsSetHostsParams {
   sld: string;
   tld: string;
   hosts: DnsHost[];
+  emailType?: DnsEmailType;
 }
 
 export interface NamecheapResponse {

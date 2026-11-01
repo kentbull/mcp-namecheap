@@ -209,11 +209,18 @@ Parameters:
 ### DNS Management Tools
 
 #### `namecheap_dns_getlist`
-Retrieves DNS host records for a domain.
+Retrieves DNS nameservers for a domain.
 
 Parameters:
 - `sld` (required): Second level domain (e.g., "example" from "example.com")
 - `tld` (required): Top level domain (e.g., "com" from "example.com")
+
+#### `namecheap_dns_gethosts`
+Retrieves the complete DNS host record response for a domain, including existing email configuration returned by Namecheap. Responses may contain raw XML; inspect API status and preserve all record values before writing.
+
+Parameters:
+- `sld` (required): Second level domain
+- `tld` (required): Top level domain
 
 #### `namecheap_dns_setcustom`
 Sets custom nameservers for a domain.
@@ -224,14 +231,15 @@ Parameters:
 - `nameservers` (required): Array of nameserver addresses
 
 #### `namecheap_dns_sethosts`
-Sets DNS host records for a domain.
+Replaces the complete DNS host record set using a form-encoded HTTP POST. **Every omitted record is deleted.** Read `namecheap_dns_gethosts` first, preserve all existing records and the email mode, then read back after writing. This tool does not merge records or detect concurrent edits.
 
 Parameters:
 - `sld` (required): Second level domain
 - `tld` (required): Top level domain
+- `emailType` (optional): Existing email mode to preserve: `NONE`, `FWD` (free forwarding), `OX` (Private Email), `GMAIL`, `MX`, or `MXE` (custom mail)
 - `hosts` (required): Array of DNS records with:
   - `hostname`: Subdomain or "@" for root
-  - `recordType`: "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", or "CAA"
+  - `recordType`: "A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "MXE", "NS", "TXT", "URL", "URL301", or "FRAME"
   - `address`: Value for the DNS record
   - `mxPriority` (optional): Priority for MX records
   - `ttl` (optional): Time to live in seconds (default: 1800)

@@ -1,4 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { DNS_RECORD_TYPES, DNS_EMAIL_TYPES } from './types.js';
 
 export const namecheapTools: Tool[] = [
   {
@@ -383,7 +384,7 @@ export const namecheapTools: Tool[] = [
   },
   {
     name: 'namecheap_dns_getlist',
-    description: 'Get DNS host records for a domain',
+    description: 'Get DNS nameservers for a domain',
     inputSchema: {
       type: 'object',
       properties: {
@@ -395,6 +396,18 @@ export const namecheapTools: Tool[] = [
           type: 'string',
           description: 'Top level domain (e.g., "com" from "example.com")',
         },
+      },
+      required: ['sld', 'tld'],
+    },
+  },
+  {
+    name: 'namecheap_dns_gethosts',
+    description: 'Get all DNS host records and email configuration for a domain before replacing records',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sld: { type: 'string', description: 'Second level domain' },
+        tld: { type: 'string', description: 'Top level domain' },
       },
       required: ['sld', 'tld'],
     },
@@ -426,7 +439,7 @@ export const namecheapTools: Tool[] = [
   },
   {
     name: 'namecheap_dns_sethosts',
-    description: 'Set DNS host records for a domain',
+    description: 'Replace ALL DNS host records for a domain. Omitted records are deleted. Read gethosts first and preserve existing records and email type.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -437,6 +450,11 @@ export const namecheapTools: Tool[] = [
         tld: {
           type: 'string',
           description: 'Top level domain',
+        },
+        emailType: {
+          type: 'string',
+          enum: [...DNS_EMAIL_TYPES],
+          description: 'Preserve the existing email mode: NONE, MXE, MX, FWD (free forwarding), OX (Private Email), or GMAIL',
         },
         hosts: {
           type: 'array',
@@ -449,7 +467,7 @@ export const namecheapTools: Tool[] = [
               },
               recordType: {
                 type: 'string',
-                enum: ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV', 'CAA'],
+                enum: [...DNS_RECORD_TYPES],
                 description: 'DNS record type',
               },
               address: {
@@ -468,7 +486,7 @@ export const namecheapTools: Tool[] = [
             },
             required: ['hostname', 'recordType', 'address'],
           },
-          description: 'Array of DNS host records',
+          description: 'Complete DNS host record set, including existing records to preserve',
         },
       },
       required: ['sld', 'tld', 'hosts'],

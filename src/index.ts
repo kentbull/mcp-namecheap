@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { NamecheapClient } from './namecheap-client.js';
 import { TldCache } from './tld-cache.js';
-import type { DnsHost } from './types.js';
+import { DNS_RECORD_TYPES, DNS_EMAIL_TYPES, type DnsHost, type DnsEmailType } from './types.js';
 
 // Configuration schema for Smithery
 export const configSchema = z.object({
@@ -254,13 +254,28 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   // DNS get list
   server.tool(
     "namecheap_dns_getlist",
-    "Get DNS host records for a domain",
+    "Get DNS nameservers for a domain",
     {
       sld: z.string().describe("Second level domain (e.g., 'example' from 'example.com')"),
       tld: z.string().describe("Top level domain (e.g., 'com' from 'example.com')")
     },
     async (args: ToolArgs) => {
       const result = await namecheapClient.dnsGetList(args.sld as string, args.tld as string);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }]
+      };
+    }
+  );
+
+  server.tool(
+    "namecheap_dns_gethosts",
+    "Get all DNS host records and email configuration for a domain before replacing records",
+    {
+      sld: z.string().describe("Second level domain"),
+      tld: z.string().describe("Top level domain")
+    },
+    async (args: ToolArgs) => {
+      const result = await namecheapClient.dnsGetHosts(args.sld as string, args.tld as string);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }]
       };
@@ -287,17 +302,18 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   // DNS set host records
   server.tool(
     "namecheap_dns_sethosts",
-    "Set DNS host records for a domain",
+    "Replace ALL DNS host records for a domain. Omitted records are deleted. Read gethosts first and preserve existing records and email type.",
     {
       sld: z.string().describe("Second level domain"),
       tld: z.string().describe("Top level domain"),
       hosts: z.array(z.object({
         hostname: z.string().describe("Subdomain or @ for root"),
-        recordType: z.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]).describe("DNS record type"),
+        recordType: z.enum(DNS_RECORD_TYPES).describe("DNS record type"),
         address: z.string().describe("Value for the DNS record"),
         ttl: z.number().optional().default(1800).describe("Time to live in seconds"),
         mxPriority: z.number().optional().describe("Priority for MX records")
-      })).describe("Array of DNS host records")
+      })).describe("Complete DNS host record set, including existing records to preserve"),
+      emailType: z.enum(DNS_EMAIL_TYPES).optional().describe("Preserve the existing email mode: NONE, MXE, MX, FWD (free forwarding), OX (Private Email), or GMAIL")
     },
     async (args: ToolArgs) => {
       const hosts = (args.hosts as Array<{
@@ -313,7 +329,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
         ttl: h.ttl,
         mxPriority: h.mxPriority
       }));
-      const result = await namecheapClient.dnsSetHosts(args.sld as string, args.tld as string, hosts);
+      const result = await namecheapClient.dnsSetHosts(args.sld as string, args.tld as string, hosts, args.emailType as DnsEmailType | undefined);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }]
       };

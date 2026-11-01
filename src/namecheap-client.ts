@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import type { 
-  DnsHost, 
+  DnsHost,
+  DnsEmailType,
   DomainsListParams,
   DomainsCheckParams,
   DomainsGetInfoParams,
@@ -219,6 +220,18 @@ export class NamecheapClient {
     return this.parseXmlToJson(response.data);
   }
 
+  async dnsGetHosts(sld: string, tld: string) {
+    const response = await this.axios.get('', {
+      params: {
+        Command: 'namecheap.domains.dns.getHosts',
+        SLD: sld,
+        TLD: tld,
+      },
+    });
+
+    return this.parseXmlToJson(response.data);
+  }
+
   async dnsSetCustom(sld: string, tld: string, nameservers: string[]) {
     const params: Record<string, string> = {
       Command: 'namecheap.domains.dns.setCustom',
@@ -236,30 +249,42 @@ export class NamecheapClient {
     return this.parseXmlToJson(response.data);
   }
 
-  async dnsSetHosts(sld: string, tld: string, hosts: DnsHost[]) {
-    const params: Record<string, string | number> = {
+  async dnsSetHosts(sld: string, tld: string, hosts: DnsHost[], emailType?: DnsEmailType) {
+    const params = new URLSearchParams({
+      ApiUser: this.apiUser,
+      ApiKey: this.apiKey,
+      UserName: this.apiUser,
+      ClientIp: this.clientIp,
       Command: 'namecheap.domains.dns.setHosts',
       SLD: sld,
       TLD: tld,
-    };
+    });
 
-    // Add host records
+    if (emailType !== undefined) {
+      params.set('EmailType', emailType);
+    }
+
+    // setHosts replaces the complete record set; callers must include existing records.
     hosts.forEach((host, index) => {
       const idx = index + 1;
-      params[`HostName${idx}`] = host.hostname;
-      params[`RecordType${idx}`] = host.recordType;
-      params[`Address${idx}`] = host.address;
+      params.set(`HostName${idx}`, host.hostname);
+      params.set(`RecordType${idx}`, host.recordType);
+      params.set(`Address${idx}`, host.address);
       
       if (host.mxPriority !== undefined) {
-        params[`MXPref${idx}`] = host.mxPriority;
+        params.set(`MXPref${idx}`, String(host.mxPriority));
       }
       
       if (host.ttl !== undefined) {
-        params[`TTL${idx}`] = host.ttl;
+        params.set(`TTL${idx}`, String(host.ttl));
       }
     });
 
-    const response = await this.axios.get('', { params });
+    const response = await this.axios.post('', params, {
+      // Override instance query defaults so credentials and records stay in the body.
+      params: null,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
 
     return this.parseXmlToJson(response.data);
   }
